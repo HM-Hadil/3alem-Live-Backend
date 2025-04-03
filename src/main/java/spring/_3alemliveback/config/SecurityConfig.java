@@ -36,7 +36,9 @@ public class SecurityConfig {
                                 "/swagger-resources/*",
                                 "/webjars/**",
                                 "/api-docs/**",
-                                "/api/auth/register/**"
+                                "/api/auth/register/**",
+                                "/api/password/**",
+                                "/api/password/request-reset"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/register/**").permitAll() // Autoriser l'inscription
 
