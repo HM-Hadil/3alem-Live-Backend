@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import spring._3alemliveback.enums.Role;
 
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -19,4 +21,8 @@ public class UserDto {
     private Role role;
     private boolean isActive;
     private boolean isVerified;
+    private String profileDescription;
+    private byte[] profileImage;
+    private List<String> domaines;
+    private List<String> certifications;
 }

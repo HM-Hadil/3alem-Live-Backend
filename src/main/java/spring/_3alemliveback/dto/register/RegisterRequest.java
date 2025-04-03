@@ -4,7 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.usertype.UserType;
 import spring._3alemliveback.enums.Role;
+
+import java.util.List;
 
 @Data
 @Builder
@@ -66,4 +69,10 @@ public class RegisterRequest {
     private String password;
     private String phone;
     private Role role;
+
+    private String profileDescription;
+    private byte[] profileImage;
+    private List<String> domaines;
+    private List<String> certifications;
+
 }

@@ -1,4 +1,5 @@
 package spring._3alemliveback.config;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import spring._3alemliveback.security.JwtAuthenticationFilter;
+
 
 @Configuration
 @EnableWebSecurity
@@ -30,9 +32,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**"
+                                "/swagger-ui/**",
+                                "/swagger-resources/*",
+                                "/webjars/**",
+                                "/api-docs/**",
+                                "/api/auth/register/**"
                         ).permitAll()
+                        .requestMatchers("/api/v1/auth/register/**").permitAll() // Autoriser l'inscription
+
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/expert/**").hasRole("EXPERT")
                         .anyRequest().authenticated()

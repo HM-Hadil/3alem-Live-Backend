@@ -14,6 +14,7 @@ import spring._3alemliveback.enums.Role;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -44,7 +45,21 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+    private String verificationToken;
 
+    @PrePersist
+    public void prePersist() {
+        this.verificationToken = UUID.randomUUID().toString();
+    }
+
+    @ElementCollection
+    private List<String> certifications;
+    private String profileDescription;
+
+    @Lob
+    private byte[] profileImage;
+    @ElementCollection
+    private List<String> domaines;
     @OneToMany(mappedBy = "user")
     private List<Token> tokens;
 

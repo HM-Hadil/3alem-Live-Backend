@@ -10,6 +10,7 @@ import spring._3alemliveback.dto.register.AuthenticationResponse;
 import spring._3alemliveback.dto.register.RegisterRequest;
 import spring._3alemliveback.entities.Token;
 import spring._3alemliveback.entities.User;
+import spring._3alemliveback.enums.Role;
 import spring._3alemliveback.exceptions.EmailAlreadyExistsException;
 import spring._3alemliveback.exceptions.UserNotFoundException;
 import spring._3alemliveback.repo.TokenRepository;
@@ -25,34 +26,85 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
 
-    public AuthenticationResponse register(RegisterRequest request) {
+
+    public AuthenticationResponse registerApprenant(RegisterRequest request) {
         // Vérifier si l'email existe déjà
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email already in use");
         }
 
-        // Créer un nouvel utilisateur
+        // Créer un nouvel utilisateur avec les champs spécifiques à l'apprenant
         var user = User.builder()
                 .nom(request.getNom())
                 .prenom(request.getPrenom())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
-                .role(request.getRole())
+                .role(Role.USER)
+
+                .domaines(request.getDomaines()) // Liste des domaines pour l'apprenant
                 .isActive(true)
-                .isVerified(false) // Nécessite vérification
+                .isVerified(false)
                 .build();
 
         var savedUser = userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
+        emailService.sendVerificationEmail(user.getEmail(), user.getVerificationToken());
+
         saveUserToken(savedUser, jwtToken);
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+    public AuthenticationResponse registerExpert(RegisterRequest request) {
+        // Vérifier si l'email existe déjà
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new EmailAlreadyExistsException("Email already in use");
+        }
+
+        // Créer un nouvel utilisateur avec les champs spécifiques à l'expert
+        var user = User.builder()
+                .nom(request.getNom())
+                .prenom(request.getPrenom())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phone(request.getPhone())
+                .role(Role.EXPERT)
+         // Spécifier le type d'utilisateur comme Expert
+                .certifications(request.getCertifications()) // Liste des certificats de type PDF
+                .profileDescription(request.getProfileDescription()) // Description du profil
+                .profileImage(request.getProfileImage()) // Image du profil
+                .domaines(request.getDomaines()) // Liste des domaines
+                .isActive(true)
+                .isVerified(false)
+                .build();
+
+        var savedUser = userRepository.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
+        emailService.sendVerificationEmail(user.getEmail(), user.getVerificationToken());
+
+        saveUserToken(savedUser, jwtToken);
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    @Transactional
+    public void verifyAccount(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
+
+        user.setVerified(true);
+        user.setVerificationToken(null); // Supprime le token après vérification
+        userRepository.save(user);
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {

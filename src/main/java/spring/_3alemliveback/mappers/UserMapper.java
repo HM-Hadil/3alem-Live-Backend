@@ -18,6 +18,10 @@ public class UserMapper {
                 .role(user.getRole())
                 .isActive(user.isActive())
                 .isVerified(user.isVerified())
+                .certifications(user.getCertifications())
+                .domaines(user.getDomaines())
+                .profileDescription(user.getProfileDescription())
+                .profileImage(user.getProfileImage())
                 .build();
     }
 }
