@@ -80,7 +80,7 @@ public class AuthenticationService {
                 .profileDescription(request.getProfileDescription()) // Description du profil
                 .profileImage(request.getProfileImage()) // Image du profil
                 .domaines(request.getDomaines()) // Liste des domaines
-                .isActive(true)
+                .isActive(false)
                 .isVerified(false)
                 .build();
 
@@ -96,6 +96,21 @@ public class AuthenticationService {
                 .refreshToken(refreshToken)
                 .build();
     }
+    public void validateExpertAccount(Long expertId) {
+        User user = userRepository.findById(expertId)
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur non trouvé"));
+
+        if (user.getRole() != Role.EXPERT) {
+            throw new IllegalStateException("L'utilisateur n'est pas un expert");
+        }
+
+        if (!user.isVerified()) {
+            throw new IllegalStateException("L'utilisateur n'a pas encore vérifié son compte par email");
+        }
+
+        user.setActive(true); // C’est maintenant que l’admin active l’expert
+        userRepository.save(user);
+    }
 
     @Transactional
     public void verifyAccount(String token) {
@@ -104,6 +119,10 @@ public class AuthenticationService {
 
         user.setVerified(true);
         user.setVerificationToken(null); // Supprime le token après vérification
+        // Activer directement si c'est un USER
+        if (user.getRole() == Role.USER) {
+            user.setActive(true);
+        }
         userRepository.save(user);
     }
 

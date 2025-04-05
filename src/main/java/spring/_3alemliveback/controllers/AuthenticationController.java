@@ -2,6 +2,7 @@ package spring._3alemliveback.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import spring._3alemliveback.dto.register.AuthenticationRequest;
@@ -35,5 +36,12 @@ public class AuthenticationController {
             @RequestBody AuthenticationRequest request
     ) {
         return ResponseEntity.ok(authenticationService.authenticate(request));
+    }
+
+    @PutMapping("/validate-expert/{expertId}")
+   // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> validateExpert(@PathVariable Long expertId) {
+        authenticationService.validateExpertAccount(expertId);
+        return ResponseEntity.ok("Le compte expert a été validé avec succès.");
     }
 }
