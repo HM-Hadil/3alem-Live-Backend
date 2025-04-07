@@ -22,6 +22,13 @@ public class UserMapper {
                 .domaines(user.getDomaines())
                 .profileDescription(user.getProfileDescription())
                 .profileImage(user.getProfileImage())
+                .niveauEtude(user.getNiveauEtude())
+                .experience(user.getExperience())
+                .linkedinUrl(user.getLinkedinUrl())
+                .portfolioUrl(user.getPortfolioUrl())
+                .cvPdf(user.getCvPdf())
+
+
                 .build();
     }
 }

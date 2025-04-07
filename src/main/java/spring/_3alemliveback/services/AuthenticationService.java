@@ -67,6 +67,15 @@ public class AuthenticationService {
             throw new EmailAlreadyExistsException("Email already in use");
         }
 
+        // Vérifier que les champs obligatoires pour l'expert sont bien fournis
+        if (request.getCertifications() == null || request.getCertifications().isEmpty()) {
+            throw new IllegalArgumentException("Les certifications sont requises pour les experts.");
+        }
+
+        if (request.getProfileDescription() == null || request.getProfileDescription().isEmpty()) {
+            throw new IllegalArgumentException("La description du profil est requise pour les experts.");
+        }
+
         // Créer un nouvel utilisateur avec les champs spécifiques à l'expert
         var user = User.builder()
                 .nom(request.getNom())
@@ -75,19 +84,21 @@ public class AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
                 .role(Role.EXPERT)
-         // Spécifier le type d'utilisateur comme Expert
-                .certifications(request.getCertifications()) // Liste des certificats de type PDF
-                .profileDescription(request.getProfileDescription()) // Description du profil
-                .profileImage(request.getProfileImage()) // Image du profil
-                .domaines(request.getDomaines()) // Liste des domaines
-                .isActive(false)
+                .certifications(request.getCertifications())  // Certificats PDF
+                .profileDescription(request.getProfileDescription())
+                .profileImage(request.getProfileImage())
+                .domaines(request.getDomaines())
+                .isActive(false) // L'admin devra valider l'expert manuellement
                 .isVerified(false)
+                .verificationToken(java.util.UUID.randomUUID().toString()) // Générer un token
                 .build();
 
         var savedUser = userRepository.save(user);
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
-        emailService.sendVerificationEmail(user.getEmail(), user.getVerificationToken());
+        var jwtToken = jwtService.generateToken(savedUser);
+        var refreshToken = jwtService.generateRefreshToken(savedUser);
+
+        // Envoi du mail de vérification
+        emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getVerificationToken());
 
         saveUserToken(savedUser, jwtToken);
 
@@ -96,6 +107,7 @@ public class AuthenticationService {
                 .refreshToken(refreshToken)
                 .build();
     }
+
     public void validateExpertAccount(Long expertId) {
         User user = userRepository.findById(expertId)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur non trouvé"));

@@ -41,6 +41,13 @@ public class User implements UserDetails {
 
     private boolean isVerified;
 
+    private String niveauEtude;
+    private String experience;
+    private String linkedinUrl;
+    private String portfolioUrl;
+    @Lob
+    private byte[] cvPdf;
+
     private String phone;
 
     @Enumerated(EnumType.STRING)

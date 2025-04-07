@@ -25,4 +25,10 @@ public class UserDto {
     private byte[] profileImage;
     private List<String> domaines;
     private List<String> certifications;
+    private String niveauEtude;
+    private String experience;
+    private String linkedinUrl;
+    private String portfolioUrl;
+    private byte[] cvPdf;
+
 }
