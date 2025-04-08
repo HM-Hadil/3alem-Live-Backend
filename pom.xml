@@ -74,7 +74,7 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>2.2.0</version>
+            <version>1.31.5</version> <!-- version compatible with Calendar 1.25.0 -->
         </dependency>
 
         <!-- Google OAuth Client Jetty -->
@@ -85,12 +85,12 @@
         </dependency>
 
         <!-- Google Calendar API -->
+        <!-- In your pom.xml -->
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-calendar</artifactId>
-            <version>v3-rev411-1.25.0</version>
+            <version>v3-rev20220715-2.0.0</version> <!-- or newer -->
         </dependency>
-
         <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>

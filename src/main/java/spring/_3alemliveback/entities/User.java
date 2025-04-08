@@ -2,6 +2,7 @@ package spring._3alemliveback.entities;
 
 
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import spring._3alemliveback.config.Base64Deserializer;
 import spring._3alemliveback.enums.Role;
 
 import java.util.Collection;
@@ -45,7 +47,7 @@ public class User implements UserDetails {
     private String experience;
     private String linkedinUrl;
     private String portfolioUrl;
-    @Lob
+    @JsonDeserialize(using = Base64Deserializer.class)
     private byte[] cvPdf;
 
     private String phone;
@@ -58,16 +60,18 @@ public class User implements UserDetails {
     public void prePersist() {
         this.verificationToken = UUID.randomUUID().toString();
     }
-
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private List<String> certifications;
+
     private String profileDescription;
 
+    @JsonDeserialize(using = Base64Deserializer.class)
     @Lob
     private byte[] profileImage;
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private List<String> domaines;
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user",fetch = FetchType.EAGER)
+
     private List<Token> tokens;
 
     public Long getId() {

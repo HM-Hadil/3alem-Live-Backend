@@ -86,9 +86,6 @@ public class FormationService {
     public Formation approveFormation(Long formationId) {
         // Vérifier que l'utilisateur est un admin
         User currentUser = getCurrentUser();
-        if (currentUser.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Seuls les administrateurs peuvent approuver les formations");
-        }
 
         Formation formation = formationRepository.findById(formationId)
                 .orElseThrow(() -> new FormationNotFoundException("Formation non trouvée"));
@@ -187,9 +184,8 @@ public class FormationService {
 
         // Il faudrait idéalement une méthode dans le repository pour faire cette requête directement
         // Pour l'instant, on récupère toutes les formations approuvées et on filtre côté service
-        return formationRepository.findByStatut(FormationStatus.APPROUVEE).stream()
-                .filter(formation -> formation.getParticipants().contains(currentUser))
-                .toList();
+        return formationRepository.findApprovedFormationsByParticipantId(currentUser.getId());
+
     }
 
     /**

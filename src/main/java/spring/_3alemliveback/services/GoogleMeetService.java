@@ -38,7 +38,7 @@ public class GoogleMeetService {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
     private static final List<String> SCOPES = Collections.singletonList(CalendarScopes.CALENDAR);
-
+    private boolean devMode = false;
     @Value("classpath:credentials.json")
     private Resource credentialsFile;
 
@@ -52,6 +52,12 @@ public class GoogleMeetService {
      */
     public String createMeetLink(String titre, String description, LocalDateTime dateDebut, LocalDateTime dateFin)
             throws IOException, GeneralSecurityException {
+        // En mode développement, retourner un lien fictif
+      /**  if (devMode) {
+            // Créer un ID de réunion fictif basé sur le timestamp
+            String meetingId = "abc-defg-hij-" + System.currentTimeMillis();
+            return "https://meet.google.com/" + meetingId;
+        }**/
 
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Calendar service = new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
@@ -98,6 +104,7 @@ public class GoogleMeetService {
             throw new FileNotFoundException("Resource not found: credentials.json");
         }
 
+
         InputStream in = credentialsFile.getInputStream();
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
@@ -107,8 +114,11 @@ public class GoogleMeetService {
                 .setAccessType("offline")
                 .build();
 
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+// Dans la méthode getCredentials
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+                .setPort(8888)
+                .setCallbackPath("/oauth2callback")
+                .build();        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
     /**

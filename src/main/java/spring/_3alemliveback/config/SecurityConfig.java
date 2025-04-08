@@ -38,6 +38,7 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/api/auth/register/**",
                                 "/api/password/**",
+                                "/api/formations/**",
                                 "/api/password/request-reset"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/register/**").permitAll() // Autoriser l'inscription

@@ -50,7 +50,7 @@ public class Formation {
     @JoinColumn(name = "formateur_id")
     private User formateur;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "formation_participants",
             joinColumns = @JoinColumn(name = "formation_id"),
