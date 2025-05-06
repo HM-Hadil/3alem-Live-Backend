@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import spring._3alemliveback.dto.formation.AvisRequest;
 import spring._3alemliveback.dto.formation.FormationRequest;
+import spring._3alemliveback.dto.formation.FormationResponseDTO;
+import spring._3alemliveback.entities.Avis;
 import spring._3alemliveback.entities.Formation;
 import spring._3alemliveback.services.FormationService;
 
@@ -48,8 +51,8 @@ public class FormationController {
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<List<Formation>> getAllPendingFormations() {
-        List<Formation> formations = formationService.getAllPendingFormations();
+    public ResponseEntity<List<FormationResponseDTO>> getAllPendingFormations() {
+        List<FormationResponseDTO> formations = formationService.getAllPendingFormations();
         return ResponseEntity.ok(formations);
     }
 
@@ -63,5 +66,47 @@ public class FormationController {
     public ResponseEntity<List<Formation>> getMyInscriptions() {
         List<Formation> formations = formationService.getMyInscriptions();
         return ResponseEntity.ok(formations);
+    }
+
+    /**
+     * Démarre une formation (change son statut à EN_COURS)
+     * Accessible uniquement par le formateur de la formation
+     */
+    @PutMapping("/demarrer/{id}")
+    public ResponseEntity<Formation> demarrerFormation(@PathVariable Long id) {
+        Formation formation = formationService.demarrerFormation(id);
+        return ResponseEntity.ok(formation);
+    }
+
+    /**
+     * Termine une formation (change son statut à TERMINEE)
+     * Accessible uniquement par le formateur de la formation
+     */
+    @PutMapping("/terminer/{id}")
+    public ResponseEntity<Formation> terminerFormation(@PathVariable Long id) {
+        Formation formation = formationService.terminerFormation(id);
+        return ResponseEntity.ok(formation);
+    }
+
+    /**
+     * Ajoute un avis sur une formation terminée
+     * Accessible uniquement par les participants de la formation
+     */
+    @PostMapping("/{id}/avis")
+    public ResponseEntity<Avis> ajouterAvis(
+            @PathVariable Long id,
+            @RequestBody AvisRequest avisRequest) {
+        Avis avis = formationService.ajouterAvis(id, avisRequest);
+        return new ResponseEntity<>(avis, HttpStatus.CREATED);
+    }
+
+    /**
+     * Récupère tous les avis d'une formation
+     * Accessible par tous
+     */
+    @GetMapping("/{id}/avis")
+    public ResponseEntity<List<Avis>> getAvisByFormation(@PathVariable Long id) {
+        List<Avis> avis = formationService.getAvisByFormation(id);
+        return ResponseEntity.ok(avis);
     }
 }

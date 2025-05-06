@@ -1,5 +1,6 @@
 package spring._3alemliveback.services;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -8,19 +9,25 @@ import org.springframework.transaction.annotation.Transactional;
 import spring._3alemliveback.dto.register.AuthenticationRequest;
 import spring._3alemliveback.dto.register.AuthenticationResponse;
 import spring._3alemliveback.dto.register.RegisterRequest;
+import spring._3alemliveback.dto.register.UserDto;
 import spring._3alemliveback.entities.Token;
 import spring._3alemliveback.entities.User;
 import spring._3alemliveback.enums.Role;
 import spring._3alemliveback.exceptions.EmailAlreadyExistsException;
 import spring._3alemliveback.exceptions.UserNotFoundException;
+import spring._3alemliveback.mapper.UserMapper;
 import spring._3alemliveback.repo.TokenRepository;
 import spring._3alemliveback.repo.UserRepository;
 import spring._3alemliveback.security.JwtService;
 
+import java.util.List;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
-
+    @Autowired
+    private UserMapper userMapper;
     private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -86,6 +93,11 @@ public class AuthenticationService {
                 .role(Role.EXPERT)
                 .certifications(request.getCertifications())  // Certificats PDF
                 .profileDescription(request.getProfileDescription())
+                .experience(request.getExperience())
+                .linkedinUrl(request.getLinkedinUrl())
+                .niveauEtude(request.getNiveauEtude())
+                .portfolioUrl(request.getPortfolioUrl())
+                .cvPdf(request.getCvPdf())
                 .profileImage(request.getProfileImage())
                 .domaines(request.getDomaines())
                 .isActive(false) // L'admin devra valider l'expert manuellement
@@ -123,7 +135,20 @@ public class AuthenticationService {
         user.setActive(true); // C’est maintenant que l’admin active l’expert
         userRepository.save(user);
     }
-
+    /**
+     * Récupérer la liste des experts qui ont vérifié leur email mais n'ont pas encore été activés par l'admin
+     * @return Liste des experts en attente de validation
+     */
+    public List<UserDto> getPendingExpertDtos() {
+        List<User> pendingExperts = userRepository.findByRoleAndIsVerifiedTrueAndIsActiveFalse(Role.EXPERT);
+        return userMapper.toDtoList(pendingExperts);
+    }
+    public List<User> getPendingExperts() {
+        return userRepository.findByRoleAndIsVerifiedTrueAndIsActiveFalse(Role.EXPERT);
+    }
+      public Optional<User> getUserById(Long id) {
+        return userRepository.findById(id);
+    }
     @Transactional
     public void verifyAccount(String token) {
         User user = userRepository.findByVerificationToken(token)

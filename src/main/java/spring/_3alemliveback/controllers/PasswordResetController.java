@@ -16,15 +16,15 @@ public class PasswordResetController {
         passwordResetService.sendPasswordResetEmail(email);
         return ResponseEntity.ok("Email de réinitialisation envoyé !");
     }
-
-    @GetMapping("/validate-token")
-    public ResponseEntity<Boolean> validateToken(@RequestParam String token) {
-        return ResponseEntity.ok(passwordResetService.validateToken(token));
-    }
-
     @PostMapping("/reset")
     public ResponseEntity<String> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
         passwordResetService.updatePassword(token, newPassword);
         return ResponseEntity.ok("Mot de passe mis à jour avec succès !");
     }
+    @GetMapping("/validate-token")
+    public ResponseEntity<Boolean> validateToken(@RequestParam String token) {
+        return ResponseEntity.ok(passwordResetService.validateToken(token));
+    }
+
+
 }

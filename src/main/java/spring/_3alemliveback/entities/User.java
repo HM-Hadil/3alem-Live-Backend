@@ -2,6 +2,8 @@ package spring._3alemliveback.entities;
 
 
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -73,7 +75,9 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user",fetch = FetchType.EAGER)
 
     private List<Token> tokens;
-
+    @ManyToMany(mappedBy = "participants")
+    @JsonIgnoreProperties({"participants", "tokens", "password"})
+    private List<Formation> formations;
     public Long getId() {
         return id;
     }

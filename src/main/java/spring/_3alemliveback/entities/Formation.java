@@ -1,5 +1,6 @@
 package spring._3alemliveback.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,13 +51,16 @@ public class Formation {
     @JoinColumn(name = "formateur_id")
     private User formateur;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "formation_participants",
             joinColumns = @JoinColumn(name = "formation_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "formations"})
     private List<User> participants = new ArrayList<>();
 
-
+    @OneToMany(mappedBy = "formation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("formation")
+    private List<Avis> avis = new ArrayList<>();
 }

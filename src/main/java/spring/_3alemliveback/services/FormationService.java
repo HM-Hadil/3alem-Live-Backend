@@ -1,25 +1,35 @@
 package spring._3alemliveback.services;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import spring._3alemliveback.dto.formation.AvisRequest;
 import spring._3alemliveback.dto.formation.FormationRequest;
+import spring._3alemliveback.dto.formation.FormationResponseDTO;
+import spring._3alemliveback.entities.Avis;
 import spring._3alemliveback.entities.Formation;
 import spring._3alemliveback.entities.User;
 import spring._3alemliveback.enums.FormationStatus;
 import spring._3alemliveback.enums.Role;
-
 import spring._3alemliveback.exceptions.AccessDeniedException;
 import spring._3alemliveback.exceptions.FormationNotFoundException;
+import spring._3alemliveback.exceptions.InvalidOperationException;
 import spring._3alemliveback.exceptions.UserNotFoundException;
+import spring._3alemliveback.repo.AvisRepository;
 import spring._3alemliveback.repo.FormationRepository;
 import spring._3alemliveback.repo.UserRepository;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +38,8 @@ public class FormationService {
     @Autowired
     private final FormationRepository formationRepository;
     private final UserRepository userRepository;
+    private final AvisRepository avisRepository;
+    private static final Logger log = LoggerFactory.getLogger(FormationService.class);
     private final GoogleMeetService googleMeetService;
 
     /**
@@ -100,9 +112,9 @@ public class FormationService {
     public Formation rejectFormation(Long formationId) {
         // Vérifier que l'utilisateur est un admin
         User currentUser = getCurrentUser();
-        if (currentUser.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Seuls les administrateurs peuvent rejeter les formations");
-        }
+        /**  if (currentUser.getRole() != Role.ADMIN) {
+         throw new AccessDeniedException("Seuls les administrateurs peuvent rejeter les formations");
+         }**/
 
         Formation formation = formationRepository.findById(formationId)
                 .orElseThrow(() -> new FormationNotFoundException("Formation non trouvée"));
@@ -154,12 +166,14 @@ public class FormationService {
     /**
      * Récupère toutes les formations en attente (pour l'admin)
      */
-    public List<Formation> getAllPendingFormations() {
-        User currentUser = getCurrentUser();
-        if (currentUser.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Accès non autorisé");
-        }
-        return formationRepository.findByStatut(FormationStatus.EN_ATTENTE);
+    @Transactional(readOnly = true)
+    public List<FormationResponseDTO> getAllPendingFormations() {
+        List<Formation> formations = formationRepository.findByStatutWithFormateur(FormationStatus.EN_ATTENTE);
+        log.debug("Nombre de formations trouvées: {}", formations.size()); // Log important
+
+        return formations.stream()
+                .map(FormationResponseDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -185,7 +199,103 @@ public class FormationService {
         // Il faudrait idéalement une méthode dans le repository pour faire cette requête directement
         // Pour l'instant, on récupère toutes les formations approuvées et on filtre côté service
         return formationRepository.findApprovedFormationsByParticipantId(currentUser.getId());
+    }
 
+    /**
+     * Permet à un formateur de démarrer sa formation (changement de statut vers EN_COURS)
+     */
+    public Formation demarrerFormation(Long formationId) {
+        User currentUser = getCurrentUser();
+        Formation formation = formationRepository.findById(formationId)
+                .orElseThrow(() -> new FormationNotFoundException("Formation non trouvée"));
+
+        // Vérifier que l'utilisateur est bien le formateur de cette formation
+        if (!formation.getFormateur().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Vous n'êtes pas le formateur de cette formation");
+        }
+
+        // Vérifier que la formation est approuvée
+        if (formation.getStatut() != FormationStatus.APPROUVEE) {
+            throw new InvalidOperationException("Seules les formations approuvées peuvent être démarrées");
+        }
+
+        // Changer le statut
+        formation.setStatut(FormationStatus.EN_COURS);
+        return formationRepository.save(formation);
+    }
+
+    /**
+     * Permet à un formateur de terminer sa formation (changement de statut vers TERMINEE)
+     */
+    public Formation terminerFormation(Long formationId) {
+        User currentUser = getCurrentUser();
+        Formation formation = formationRepository.findById(formationId)
+                .orElseThrow(() -> new FormationNotFoundException("Formation non trouvée"));
+
+        // Vérifier que l'utilisateur est bien le formateur de cette formation
+        if (!formation.getFormateur().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Vous n'êtes pas le formateur de cette formation");
+        }
+
+        // Vérifier que la formation est en cours
+        if (formation.getStatut() != FormationStatus.EN_COURS) {
+            throw new InvalidOperationException("Seules les formations en cours peuvent être terminées");
+        }
+
+        // Changer le statut
+        formation.setStatut(FormationStatus.TERMINEE);
+        return formationRepository.save(formation);
+    }
+
+    /**
+     * Permet à un participant d'ajouter un avis sur une formation terminée
+     */
+    public Avis ajouterAvis(Long formationId, AvisRequest avisRequest) {
+        User currentUser = getCurrentUser();
+        Formation formation = formationRepository.findById(formationId)
+                .orElseThrow(() -> new FormationNotFoundException("Formation non trouvée"));
+
+        // Vérifier que la formation est terminée
+        if (formation.getStatut() != FormationStatus.TERMINEE) {
+            throw new InvalidOperationException("Vous ne pouvez ajouter un avis que sur des formations terminées");
+        }
+
+        // Vérifier que l'utilisateur est bien un participant de cette formation
+        if (!formation.getParticipants().contains(currentUser)) {
+            throw new AccessDeniedException("Vous n'êtes pas inscrit à cette formation");
+        }
+
+        // Vérifier si l'utilisateur a déjà donné son avis
+        Optional<Avis> existingAvis = avisRepository.findByFormationAndUtilisateur(formation, currentUser);
+        if (existingAvis.isPresent()) {
+            throw new InvalidOperationException("Vous avez déjà donné votre avis sur cette formation");
+        }
+
+        // Valider la note (entre 1 et 5)
+        if (avisRequest.getNote() < 1 || avisRequest.getNote() > 5) {
+            throw new InvalidOperationException("La note doit être comprise entre 1 et 5");
+        }
+
+        // Créer l'avis
+        Avis avis = Avis.builder()
+                .commentaire(avisRequest.getCommentaire())
+                .note(avisRequest.getNote())
+                .formation(formation)
+                .utilisateur(currentUser)
+                .dateCreation(LocalDateTime.now())
+                .build();
+
+        return avisRepository.save(avis);
+    }
+
+    /**
+     * Récupère tous les avis d'une formation
+     */
+    public List<Avis> getAvisByFormation(Long formationId) {
+        Formation formation = formationRepository.findById(formationId)
+                .orElseThrow(() -> new FormationNotFoundException("Formation non trouvée"));
+
+        return avisRepository.findByFormation(formation);
     }
 
     /**
