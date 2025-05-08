@@ -6,21 +6,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import spring._3alemliveback.dto.register.AuthenticationRequest;
-import spring._3alemliveback.dto.register.AuthenticationResponse;
-import spring._3alemliveback.dto.register.RegisterRequest;
-import spring._3alemliveback.dto.register.UserDto;
+import spring._3alemliveback.dto.register.*;
 import spring._3alemliveback.entities.User;
 import spring._3alemliveback.mapper.UserMapper;
 import spring._3alemliveback.services.AuthenticationService;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @CrossOrigin(origins = "http://localhost:4200")
-
 @RequiredArgsConstructor
 public class AuthenticationController {
     @Autowired
@@ -36,11 +33,13 @@ public class AuthenticationController {
     public ResponseEntity<AuthenticationResponse> registerApprenant(@RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authenticationService.registerApprenant(request));
     }
+
     @GetMapping("/verify")
     public ResponseEntity<String> verifyAccount(@RequestParam String token) {
         authenticationService.verifyAccount(token);
         return ResponseEntity.ok("Votre compte a été vérifié avec succès !");
     }
+
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> authenticate(
             @RequestBody AuthenticationRequest request
@@ -49,7 +48,7 @@ public class AuthenticationController {
     }
 
     @PutMapping("/{expertId}")
-   // @PreAuthorize("hasRole('ADMIN')")
+    // @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> validateExpert(@PathVariable Long expertId) {
         authenticationService.validateExpertAccount(expertId);
         return ResponseEntity.ok("Le compte expert a été validé avec succès.");
@@ -66,6 +65,7 @@ public class AuthenticationController {
         List<UserDto> pendingExpertDtos = userMapper.toDtoList(pendingExperts);
         return ResponseEntity.ok(pendingExpertDtos);
     }
+
     @GetMapping("/user/{id}")
     @PreAuthorize("permitAll()")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
@@ -76,5 +76,45 @@ public class AuthenticationController {
             return ResponseEntity.ok(userDto);
         } else {
             return ResponseEntity.notFound().build();
-        }}
+        }
+    }
+
+    @PutMapping("/profile")
+    // Only authenticated users can update their profile
+    public ResponseEntity<UserDto> updateUserProfile(
+            @RequestBody UserProfileUpdateRequest updateRequest,
+            Principal connectedUser // Inject the authenticated user's principal
+    ) {
+        User updatedUser = authenticationService.updateUserProfile(connectedUser.getName(), updateRequest);
+        UserDto updatedUserDto = userMapper.toDto(updatedUser);
+        return ResponseEntity.ok(updatedUserDto);
+    }
+
+    @GetMapping("/user/by-email")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserDto> getUserByEmail(Principal connectedUser) {
+        String email = connectedUser.getName();
+        Optional<User> userOptional = authenticationService.getUserByEmail(email);
+
+        if (userOptional.isPresent()) {
+            UserDto userDto = userMapper.toDto(userOptional.get());
+            return ResponseEntity.ok(userDto);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserDto> getUserProfile(Principal connectedUser) {
+        String email = connectedUser.getName();
+        Optional<User> userOptional = authenticationService.getUserByEmail(email);
+
+        if (userOptional.isPresent()) {
+            UserDto userDto = userMapper.toDto(userOptional.get());
+            return ResponseEntity.ok(userDto);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

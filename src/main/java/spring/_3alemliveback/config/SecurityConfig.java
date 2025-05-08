@@ -18,6 +18,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import spring._3alemliveback.security.JwtAuthenticationFilter;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,20 +37,25 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/**",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register/**",
+                                "/api/v1/auth/verify",
                                 "/swagger-ui/**",
                                 "/api/chatbot/**",
                                 "/swagger-resources/*",
                                 "/webjars/**",
                                 "/api-docs/**",
+                                "/v3/api-docs/**",
                                 "/api/auth/register/**",
                                 "/api/password/**",
-                                "/api/formations/**",
                                 "/api/password/request-reset"
                         ).permitAll()
-                        .requestMatchers("/api/v1/auth/register/**").permitAll() // Autoriser l'inscription
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/expert/**").hasRole("EXPERT")
+                        // Remove duplicate permitAll for register endpoints
+                        .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/v1/expert/**").hasAuthority("ROLE_EXPERT")
+                        // Modified to require authentication for formations
+                        .requestMatchers("/api/formations/public/**").permitAll()
+                        .requestMatchers("/api/formations/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -70,10 +76,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*")); // You may want to restrict this in production
+        // Change from wildcard to specific origin
+        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        // Enable credentials (important for cookies/authentication)
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

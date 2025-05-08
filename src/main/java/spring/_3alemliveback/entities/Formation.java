@@ -1,5 +1,6 @@
 package spring._3alemliveback.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,6 @@ import java.util.List;
 @Entity
 @Table(name = "formations")
 public class Formation {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,7 +35,6 @@ public class Formation {
     private Integer duree; // en heures
     private Integer nombreMaxParticipants;
     private Double prix;
-
     private String urlMeet;
 
     @Lob
@@ -49,6 +48,9 @@ public class Formation {
 
     @ManyToOne
     @JoinColumn(name = "formateur_id")
+    // Si tu veux filtrer certaines propriétés de User mais garder la relation
+    @JsonIgnoreProperties({"formations", "inscriptions", "password", "authorities",
+            "accountNonExpired", "accountNonLocked", "credentialsNonExpired"})
     private User formateur;
 
     @ManyToMany(fetch = FetchType.LAZY)
@@ -57,10 +59,12 @@ public class Formation {
             joinColumns = @JoinColumn(name = "formation_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "formations"})
+    // On ignore complètement cette collection lors de la sérialisation
+    @JsonIgnore
     private List<User> participants = new ArrayList<>();
 
     @OneToMany(mappedBy = "formation", cascade = CascadeType.ALL, orphanRemoval = true)
+    // On ignore la référence retour vers formation dans chaque avis
     @JsonIgnoreProperties("formation")
     private List<Avis> avis = new ArrayList<>();
 }

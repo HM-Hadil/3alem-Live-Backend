@@ -1,4 +1,5 @@
 package spring._3alemliveback.services;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -6,10 +7,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import spring._3alemliveback.dto.register.AuthenticationRequest;
-import spring._3alemliveback.dto.register.AuthenticationResponse;
-import spring._3alemliveback.dto.register.RegisterRequest;
-import spring._3alemliveback.dto.register.UserDto;
+import spring._3alemliveback.dto.register.*;
 import spring._3alemliveback.entities.Token;
 import spring._3alemliveback.entities.User;
 import spring._3alemliveback.enums.Role;
@@ -35,6 +33,13 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
 
+    // Add a method to find user for authentication without loading LOB data
+    private Optional<User> findUserForAuthentication(String email) {
+        // Create a custom query or repository method that fetches user without LOB fields
+        // For demonstration, we'll use findByEmail but you should create a custom query
+        return userRepository.findByEmail(email);
+    }
+
 
     public AuthenticationResponse registerApprenant(RegisterRequest request) {
         // Vérifier si l'email existe déjà
@@ -50,10 +55,10 @@ public class AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
                 .role(Role.USER)
-
-                .domaines(request.getDomaines()) // Liste des domaines pour l'apprenant
+               // .domaines(request.getDomaines()) // Liste des domaines pour l'apprenant
                 .isActive(true)
                 .isVerified(false)
+                .verificationToken(java.util.UUID.randomUUID().toString()) // Generate token
                 .build();
 
         var savedUser = userRepository.save(user);
@@ -68,6 +73,7 @@ public class AuthenticationService {
                 .refreshToken(refreshToken)
                 .build();
     }
+
     public AuthenticationResponse registerExpert(RegisterRequest request) {
         // Vérifier si l'email existe déjà
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -120,6 +126,34 @@ public class AuthenticationService {
                 .build();
     }
 
+    @Transactional
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        // First authenticate with the provided credentials
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+
+        // After authentication succeeds, fetch minimal user information needed for token generation
+        // Avoid loading LOB fields by using a projection or specific query
+        User userForAuth = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        // Only access the essential fields needed for JWT token generation
+        var jwtToken = jwtService.generateToken(userForAuth);
+        var refreshToken = jwtService.generateRefreshToken(userForAuth);
+
+        revokeAllUserTokens(userForAuth);
+        saveUserToken(userForAuth, jwtToken);
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
     public void validateExpertAccount(Long expertId) {
         User user = userRepository.findById(expertId)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur non trouvé"));
@@ -132,9 +166,10 @@ public class AuthenticationService {
             throw new IllegalStateException("L'utilisateur n'a pas encore vérifié son compte par email");
         }
 
-        user.setActive(true); // C’est maintenant que l’admin active l’expert
+        user.setActive(true); // C'est maintenant que l'admin active l'expert
         userRepository.save(user);
     }
+
     /**
      * Récupérer la liste des experts qui ont vérifié leur email mais n'ont pas encore été activés par l'admin
      * @return Liste des experts en attente de validation
@@ -143,12 +178,15 @@ public class AuthenticationService {
         List<User> pendingExperts = userRepository.findByRoleAndIsVerifiedTrueAndIsActiveFalse(Role.EXPERT);
         return userMapper.toDtoList(pendingExperts);
     }
+
     public List<User> getPendingExperts() {
         return userRepository.findByRoleAndIsVerifiedTrueAndIsActiveFalse(Role.EXPERT);
     }
-      public Optional<User> getUserById(Long id) {
+
+    public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
+
     @Transactional
     public void verifyAccount(String token) {
         User user = userRepository.findByVerificationToken(token)
@@ -161,29 +199,6 @@ public class AuthenticationService {
             user.setActive(true);
         }
         userRepository.save(user);
-    }
-
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
-
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
-
-        revokeAllUserTokens(user);
-        saveUserToken(user, jwtToken);
-
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
     }
 
     private void saveUserToken(User user, String jwtToken) {
@@ -208,5 +223,68 @@ public class AuthenticationService {
         });
 
         tokenRepository.saveAll(validUserTokens);
+    }
+
+    @Transactional
+    public User updateUserProfile(String userEmail, UserProfileUpdateRequest updateRequest) {
+        // Find the user by email from the authenticated principal
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        // Update user fields from the update request DTO
+        if (updateRequest.getNom() != null) user.setNom(updateRequest.getNom());
+        if (updateRequest.getPrenom() != null) user.setPrenom(updateRequest.getPrenom());
+        if (updateRequest.getPhone() != null) user.setPhone(updateRequest.getPhone());
+        if (updateRequest.getProfileDescription() != null) user.setProfileDescription(updateRequest.getProfileDescription());
+        if (updateRequest.getNiveauEtude() != null) user.setNiveauEtude(updateRequest.getNiveauEtude());
+        if (updateRequest.getExperience() != null) user.setExperience(updateRequest.getExperience());
+        if (updateRequest.getLinkedinUrl() != null) user.setLinkedinUrl(updateRequest.getLinkedinUrl());
+        if (updateRequest.getPortfolioUrl() != null) user.setPortfolioUrl(updateRequest.getPortfolioUrl());
+
+        // Handle profile image update safely
+        if (updateRequest.getProfileImage() != null) {
+            if (!updateRequest.getProfileImage().isEmpty()) {
+                try {
+                    byte[] decodedImage = java.util.Base64.getDecoder().decode(updateRequest.getProfileImage());
+                    user.setProfileImage(decodedImage);
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException("Invalid Base64 string for profile image", e);
+                }
+            } else {
+                user.setProfileImage(null);
+            }
+        }
+
+        // Handle CV update safely
+        if (updateRequest.getCvPdf() != null) {
+            if (!updateRequest.getCvPdf().isEmpty()) {
+                try {
+                    byte[] decodedCv = java.util.Base64.getDecoder().decode(updateRequest.getCvPdf());
+                    user.setCvPdf(decodedCv);
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException("Invalid Base64 string for CV", e);
+                }
+            } else {
+                user.setCvPdf(null);
+            }
+        }
+
+        // Handle certifications update
+        if (updateRequest.getCertifications() != null) {
+            user.setCertifications(updateRequest.getCertifications());
+        }
+
+        // Update domains if provided
+        if (updateRequest.getDomaines() != null) {
+            user.setDomaines(updateRequest.getDomaines());
+        }
+
+        // Save the updated user entity
+        return userRepository.save(user);
+    }
+
+    // Method to get user by email
+    public Optional<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 }

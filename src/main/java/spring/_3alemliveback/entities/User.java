@@ -3,6 +3,7 @@ package spring._3alemliveback.entities;
 
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.persistence.*;
@@ -38,7 +39,7 @@ public class User implements UserDetails {
 
     @Column(unique = true)
     private String email;
-
+    @JsonIgnore
     private String password;
 
     private boolean isActive;
@@ -76,7 +77,7 @@ public class User implements UserDetails {
 
     private List<Token> tokens;
     @ManyToMany(mappedBy = "participants")
-    @JsonIgnoreProperties({"participants", "tokens", "password"})
+    @JsonIgnore
     private List<Formation> formations;
     public Long getId() {
         return id;
