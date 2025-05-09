@@ -12,6 +12,9 @@ import lombok.*;
 public class AuthenticationResponse {
     private String token;
     private String refreshToken;
+    private boolean isActive;
+
+    private boolean isVerified;
 
     public String getToken() {
         return token;

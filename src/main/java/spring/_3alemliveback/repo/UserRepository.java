@@ -20,4 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Find experts who have verified their email but haven't been activated by admin
     @Query("SELECT u FROM User u WHERE u.role = :role AND u.isVerified = true AND u.isActive = false")
     List<User> findByRoleAndIsVerifiedTrueAndIsActiveFalse(Role role);
+    List<User> findByRoleAndIsVerifiedTrue(Role role);
+    @Query("SELECT u FROM User u WHERE u.role = :role AND u.isVerified = true AND u.isActive = true")
+    List<User> findByRoleAndIsVerifiedTrueAndIsActiveTrue(Role role);
 }

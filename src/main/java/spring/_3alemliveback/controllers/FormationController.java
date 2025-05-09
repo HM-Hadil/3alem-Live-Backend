@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/formations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@CrossOrigin(origins = "*")
 public class FormationController {
 
     private final FormationService formationService;

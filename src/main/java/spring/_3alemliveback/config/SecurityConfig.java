@@ -8,6 +8,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -18,7 +21,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import spring._3alemliveback.security.JwtAuthenticationFilter;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
@@ -37,25 +42,24 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/register/**",
-                                "/api/v1/auth/verify",
                                 "/swagger-ui/**",
                                 "/api/chatbot/**",
                                 "/swagger-resources/*",
                                 "/webjars/**",
                                 "/api-docs/**",
                                 "/v3/api-docs/**",
-                                "/api/auth/register/**",
                                 "/api/password/**",
-                                "/api/password/request-reset"
+                                "/api/formations/**",
+                                "/api/password/request-reset",
+                                "/api/v1/auth/**"
                         ).permitAll()
                         // Remove duplicate permitAll for register endpoints
-                        .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/v1/expert/**").hasAuthority("ROLE_EXPERT")
+                      //  .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
+                    //    .requestMatchers("/api/v1/expert/**").hasAuthority("ROLE_EXPERT")
                         // Modified to require authentication for formations
-                        .requestMatchers("/api/formations/public/**").permitAll()
-                        .requestMatchers("/api/formations/**").authenticated()
+                        .requestMatchers("/api/formations/**").permitAll()
+
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -89,4 +93,5 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 }

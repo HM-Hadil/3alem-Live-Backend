@@ -59,10 +59,7 @@ public class User implements UserDetails {
     private Role role;
     private String verificationToken;
 
-    @PrePersist
-    public void prePersist() {
-        this.verificationToken = UUID.randomUUID().toString();
-    }
+
     @ElementCollection(fetch = FetchType.EAGER)
     private List<String> certifications;
 
